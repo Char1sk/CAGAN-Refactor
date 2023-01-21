@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class AdversarialLoss(nn.Module):
     
-    def __init__(self):
+    def __init__(self, device):
         super(AdversarialLoss, self).__init__()
         self.real_label = 1.0
         self.fake_label = 0.0
@@ -12,10 +12,12 @@ class AdversarialLoss(nn.Module):
         self.fake_label_var = None
         # self.loss = nn.BCELoss()
         self.loss = nn.MSELoss()
+        
+        self.device = device
     
     def forward(self, input, target_is_real):
         target_tensor = self.get_target_tensor(input, target_is_real)
-        # target_tensor = target_tensor.cuda()
+        target_tensor = target_tensor.to(self.device)
         return self.loss(input, target_tensor)
     
     def get_target_tensor(self, input, target_is_real):

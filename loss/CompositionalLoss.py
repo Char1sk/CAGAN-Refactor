@@ -4,11 +4,11 @@ import torch.nn as nn
 
 class CompositionalLoss(nn.Module):
     
-    def __init__(self, alpha):
+    def __init__(self, alpha, device):
         super(CompositionalLoss, self).__init__()
         self.alpha = alpha
         self.criterionGlobal = GlobalLoss()
-        self.criterionLocal  = LocalLoss()
+        self.criterionLocal  = LocalLoss(device)
     
     def forward(self, pred, label, mats):
         lossGlobal = self.criterionGlobal(pred, label)
@@ -30,12 +30,13 @@ class GlobalLoss(nn.Module):
 
 class LocalLoss(nn.Module):
     
-    def __init__(self):
+    def __init__(self, device):
         super(LocalLoss, self).__init__()
         self.criterionL1 = torch.nn.L1Loss()
+        self.device = device
     
     def forward(self, pred, label, mats):
-        # loss = torch.zeros((), device='cuda')
+        loss = torch.zeros((), device=self.device)
         for i in range(mats.size(1)):
             mat = mats[:,i,:,:].unsqueeze(1)
             mp, ml = self.dot_product(pred, label, mat)

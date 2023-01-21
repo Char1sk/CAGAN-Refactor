@@ -55,8 +55,8 @@ def main():
     Disc.apply(weights_init)
     
     # Loss
-    criterionAdv = AdversarialLoss()
-    criterionCmp = CompositionalLoss(opt.alpha)
+    criterionAdv = AdversarialLoss(device)
+    criterionCmp = CompositionalLoss(opt.alpha, device)
     criterionPer = PerceptualLoss(VGG, opt.vgg_layers)
     
     # Optim
