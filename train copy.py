@@ -6,7 +6,7 @@ import os
 import time
 import logging
 
-from options.train_options import TrainOptions
+import config
 from utils.weight_init import weights_init
 from utils.fid_score import get_fid
 from data.dataset import MyDataset
@@ -20,9 +20,10 @@ from loss.PerceptualLoss import PerceptualLoss
 from loss.LossRecord import LossRecord
 
 
-def getLogger(logDir='./Logs', logPath=None):
+def getLogger(logPath=None):
     
     if logPath == None:
+        logDir = './Logs/'
         if not os.path.exists(logDir):
             os.mkdir(logDir)
         nowTime = time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime(time.time()))
@@ -47,25 +48,25 @@ def getLogger(logDir='./Logs', logPath=None):
 
 
 def main():
-    # Option
-    opt = TrainOptions().parse()
+    # Config
+    conf = config.TrainConfig
     
     # Device
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f'using {device} device')
     
     # Data
-    trainSet = MyDataset(opt, True)
-    testSet  = MyDataset(opt, False)
-    trainLoader = DataLoader(dataset=trainSet, batch_size=opt.batch_size, shuffle=True)
+    trainSet = MyDataset(conf, True)
+    testSet  = MyDataset(conf, False)
+    trainLoader = DataLoader(dataset=trainSet, batch_size=conf.batchSize, shuffle=True)
     testLoader  = DataLoader(dataset=testSet,  batch_size=1, shuffle=False)
     
     # Models
-    VGG = MyVggEncoder(opt.vgg_model)
-    GenAppE = MyGeneratorEncoder(in_channels = opt.input_nc)
-    GenComE = MyGeneratorEncoder(in_channels = opt.conpt_nc)
-    GenD = MyGeneratorDecoder(out_channels = opt.output_nc)
-    Disc = MyPatchDiscriminator(in_channels = opt.input_nc + opt.conpt_nc + opt.output_nc)
+    VGG = MyVggEncoder(conf.vggModel)
+    GenAppE = MyGeneratorEncoder(in_channels = conf.imageChannels)
+    GenComE = MyGeneratorEncoder(in_channels = conf.conptChannels)
+    GenD = MyGeneratorDecoder(out_channels = conf.labelChannels)
+    Disc = MyPatchDiscriminator(in_channels = conf.imageChannels + conf.conptChannels + conf.labelChannels)
     
     # Cuda
     VGG.to(device)
@@ -82,26 +83,26 @@ def main():
     
     # Loss
     criterionAdv = AdversarialLoss()
-    criterionCmp = CompositionalLoss(opt.alpha)
-    criterionPer = PerceptualLoss(VGG, opt.vgg_layers)
+    criterionCmp = CompositionalLoss(conf.alpha)
+    criterionPer = PerceptualLoss(VGG, conf.layersVGG)
     
     # Optim
-    optimGenAppE = torch.optim.Adam(GenAppE.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2))
-    optimGenComE = torch.optim.Adam(GenComE.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2))
-    optimGenD    = torch.optim.Adam(GenD.parameters(),    lr=opt.lr, betas=(opt.beta1, opt.beta2))
-    optimDisc    = torch.optim.Adam(Disc.parameters(),    lr=opt.lr, betas=(opt.beta1, opt.beta2))
+    optimGenAppE = torch.optim.Adam(GenAppE.parameters(), lr=conf.lr, betas=(conf.beta1, conf.beta2))
+    optimGenComE = torch.optim.Adam(GenComE.parameters(), lr=conf.lr, betas=(conf.beta1, conf.beta2))
+    optimGenD    = torch.optim.Adam(GenD.parameters(),    lr=conf.lr, betas=(conf.beta1, conf.beta2))
+    optimDisc    = torch.optim.Adam(Disc.parameters(),    lr=conf.lr, betas=(conf.beta1, conf.beta2))
     
     # Log
-    logger = getLogger(logDir=opt.logs_folder)
+    logger = getLogger()
     
     # Print Params
-    logger.info(str(opt))
+    logger.info(str(conf))
     
     # Train
     logger.info('=========== Training Begin ===========')
     
     epochRecord = LossRecord()
-    for epoch in range(1, opt.epochs+1):
+    for epoch in range(1, conf.epochs+1):
         logger.info(f'Epoch: {epoch:>3d}')
         
         batchRecord = LossRecord()
@@ -138,10 +139,10 @@ def main():
             # lossGAdv = criterionAdv(fakeJudge, True)
             # lossGCmp = criterionCmp(preds, labels, conpts)
             # lossGPer = criterionPer(preds, labels)
-            # lossG = lossGAdv + opt.lamda*lossGCmp + opt.gamma*lossGPer
+            # lossG = lossGAdv + conf.lamda*lossGCmp + conf.gamma*lossGPer
             lossGAdv = criterionAdv(fakeJudge, True)
-            lossGCmp = opt.lamda * criterionCmp(preds, labels, conpts)
-            lossGPer = opt.gamma * criterionPer(preds, labels)
+            lossGCmp = conf.lamda * criterionCmp(preds, labels, conpts)
+            lossGPer = conf.gamma * criterionPer(preds, labels)
             lossG = lossGAdv + lossGCmp + lossGPer
             lossG.backward()
             
@@ -153,15 +154,15 @@ def main():
             batchRecord.add(lossD.item(), lossG.item(), lossGAdv.item(), lossGCmp.item(), lossGPer.item())
             epochRecord.add(lossD.item(), lossG.item(), lossGAdv.item(), lossGCmp.item(), lossGPer.item())
             
-            # ### Print Every Batch Period
-            # if i % conf.printPeriod == 0:
-            #     logger.info(f'Batch: {i:>3d};' +
-            #                 f' D loss: {batchRecord.D/conf.printPeriod:>7.5f};'       +
-            #                 f' G loss: {batchRecord.G/conf.printPeriod:>7.5f};'       +
-            #                 f' GAdv loss: {batchRecord.GAdv/conf.printPeriod:>7.5f};' +
-            #                 f' GCmp loss: {batchRecord.GCmp/conf.printPeriod:>7.5f};' +
-            #                 f' GPer loss: {batchRecord.GPer/conf.printPeriod:>7.5f};' )
-            #     batchRecord.clear()
+            ### Print Every Batch Period
+            if i % conf.printPeriod == 0:
+                logger.info(f'Batch: {i:>3d};' +
+                            f' D loss: {batchRecord.D/conf.printPeriod:>7.5f};'       +
+                            f' G loss: {batchRecord.G/conf.printPeriod:>7.5f};'       +
+                            f' GAdv loss: {batchRecord.GAdv/conf.printPeriod:>7.5f};' +
+                            f' GCmp loss: {batchRecord.GCmp/conf.printPeriod:>7.5f};' +
+                            f' GPer loss: {batchRecord.GPer/conf.printPeriod:>7.5f};' )
+                batchRecord.clear()
         
         ### Print Every Epoch
         logger.info(f'Epoch: {epoch:>3d};' +
@@ -173,7 +174,7 @@ def main():
         epochRecord.clear()
         
         ### Test and Save Every Epoch Period
-        if epoch >= opt.test_start and epoch % opt.test_period == 0:
+        if epoch % conf.testPeriod == 0:
             logger.info('=========== Test ===========')
             with torch.no_grad():
                 testRecord = LossRecord()
@@ -194,22 +195,22 @@ def main():
                     # lossGAdv = criterionAdv(fakeJudge, True)
                     # lossGCmp = criterionCmp(preds, labels, conpts)
                     # lossGPer = criterionPer(preds, labels)
-                    # lossG = lossGAdv + opt.lamda*lossGCmp + opt.gamma*lossGPer
+                    # lossG = lossGAdv + conf.lamda*lossGCmp + conf.gamma*lossGPer
                     lossGAdv = criterionAdv(fakeJudge, True)
-                    lossGCmp = opt.lamda * criterionCmp(preds, labels, conpts)
-                    lossGPer = opt.gamma * criterionPer(preds, labels)
+                    lossGCmp = conf.lamda * criterionCmp(preds, labels, conpts)
+                    lossGPer = conf.gamma * criterionPer(preds, labels)
                     lossG = lossGAdv + lossGCmp + lossGPer
                     
                     testRecord.add(lossD.item(), lossG.item(), lossGAdv.item(), lossGCmp.item(), lossGPer.item())
                     
-                    if opt.save_image_when_test:
-                        saveDir = os.path.join(opt.image_saves_folder, str(epoch))
+                    if conf.needImage:
+                        saveDir = f'./Saves/{epoch}'
                         if not os.path.exists(saveDir):
                             os.mkdir(saveDir)
                         torchvision.utils.save_image(preds, f'{saveDir}/{str(i)}.jpg', normalize=True, scale_each=True)
                 
-                if opt.save_image_when_test:
-                    fid = get_fid([saveDir, opt.fid_list])
+                if conf.needImage:
+                    fid = get_fid([f'./Saves/{epoch}', conf.fidPath])
                     logger.info(f'Epoch: {epoch:>3d}; FID: {fid:>9.5f};')
                     
                 logger.info(f'Epoch: {epoch:>3d};' +
@@ -218,17 +219,17 @@ def main():
                     f' GAdv loss: {testRecord.GAdv/len(testLoader):>7.5f};' +
                     f' GCmp loss: {testRecord.GCmp/len(testLoader):>7.5f};' +
                     f' GPer loss: {testRecord.GPer/len(testLoader):>7.5f};' + '\n')
-                # Save
-                if not os.path.exists(opt.model_saves_folder):
-                    os.mkdir(opt.model_saves_folder)
-                Disc_out_path = os.path.join(opt.model_saves_folder, f'Disc_epoch_{epoch}.weight')
-                torch.save(Disc.state_dict(), Disc_out_path)
-                GenD_out_path = os.path.join(opt.model_saves_folder, f'GenD_epoch_{epoch}.weight')
-                torch.save(GenD.state_dict(), GenD_out_path)
-                GenAppE_out_path = os.path.join(opt.model_saves_folder, f'GenAppE_epoch_{epoch}.weight')
-                torch.save(GenAppE.state_dict(), GenAppE_out_path)
-                GenComE_out_path = os.path.join(opt.model_saves_folder, f'GenComE_epoch_{epoch}.weight')
-                torch.save(GenComE.state_dict(), GenComE_out_path)
+                
+        
+    # Save
+    Disc_out_path = "./Checkpoint/Disc_epoch_{}.weight".format(epoch)
+    torch.save(Disc.state_dict(), Disc_out_path)
+    GenD_out_path = "./Checkpoint/GenD_epoch_{}.weight".format(epoch)
+    torch.save(GenD.state_dict(), GenD_out_path)
+    GenAppE_out_path = "./Checkpoint/GenAppE_epoch_{}.weight".format(epoch)
+    torch.save(GenAppE.state_dict(), GenAppE_out_path)
+    GenComE_out_path = "./Checkpoint/GenComE_epoch_{}.weight".format(epoch)
+    torch.save(GenComE.state_dict(), GenComE_out_path)
     
     logger.info('=========== Training  End  ===========')
 

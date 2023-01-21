@@ -35,7 +35,7 @@ class LocalLoss(nn.Module):
         self.criterionL1 = torch.nn.L1Loss()
     
     def forward(self, pred, label, mats):
-        loss = torch.zeros((), device='cuda')
+        # loss = torch.zeros((), device='cuda')
         for i in range(mats.size(1)):
             mat = mats[:,i,:,:].unsqueeze(1)
             mp, ml = self.dot_product(pred, label, mat)

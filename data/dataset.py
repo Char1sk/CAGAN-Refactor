@@ -10,27 +10,27 @@ import random
 import os
 
 class MyDataset(data.Dataset):
-    def __init__(self, conf, isTrain):
+    def __init__(self, opt, isTrain):
         super(MyDataset, self).__init__()
         
-        self.conf = conf
+        self.opt = opt
         self.isTrain = isTrain
         # [ ( input, label, inputMat, labelMat ) ]
         if self.isTrain:
-            self.imageNames = getNames(os.path.join(self.conf.dataFolder, self.conf.trainFile))
+            self.imageNames = getNames(os.path.join(self.opt.data_folder, self.opt.train_list))
         else:
-            self.imageNames = getNames(os.path.join(self.conf.dataFolder, self.conf.testFile))
+            self.imageNames = getNames(os.path.join(self.opt.data_folder, self.opt.test_list))
     
     def __getitem__(self, index):
         names = self.imageNames[index]
         
-        inputPath = os.path.join(self.conf.dataFolder, names[0])
-        conptPath = os.path.join(self.conf.dataFolder, names[2])
-        labelPath = os.path.join(self.conf.dataFolder, names[1])
+        inputPath = os.path.join(self.opt.data_folder, names[0])
+        conptPath = os.path.join(self.opt.data_folder, names[2])
+        labelPath = os.path.join(self.opt.data_folder, names[1])
         
-        inputs = getInputs(inputPath, self.conf)
-        conpts = getConpts(conptPath, self.conf)
-        labels = getLabels(labelPath, self.conf)
+        inputs = getInputs(inputPath, self.opt.output_size)
+        conpts = getConpts(conptPath, self.opt.output_size)
+        labels = getLabels(labelPath, self.opt.output_size)
         
         inputs = torch.from_numpy(inputs)
         conpts = torch.from_numpy(conpts)
@@ -54,7 +54,7 @@ def getNames(path):
     return ret
 
 
-def getInputs(path, conf):
+def getInputs(path, shape):
     # img: H*W*1 numpy
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
     # img = np.expand_dims(img, axis=2)
@@ -66,17 +66,17 @@ def getInputs(path, conf):
     # img: 1*H*W numpy
     # img = np.transpose(img.numpy(), (2, 0, 1))
     # img: 1*256*256 numpy
-    img = zeroPadding(img, conf.targetSize)
+    img = zeroPadding(img, shape)
     # numpy
     return img
 
 
-def getConpts(path, conf):
+def getConpts(path, shape):
     # get mat, n*256*256
     mats = sio.loadmat(path)['res_label']
     mats = mats.astype(np.float32)
     mats = np.transpose(mats, (2, 0, 1))
-    mats = zeroPadding(mats, conf.targetSize)
+    mats = zeroPadding(mats, shape)
     
     # choose 8 channels
     l0 = mats[0, :, :]
@@ -92,21 +92,21 @@ def getConpts(path, conf):
     l7 = mats[13, :, :]
     
     # merge channels
-    mat = np.zeros((1, conf.targetSize, conf.targetSize), dtype=np.float32)
-    mat = np.concatenate((mat, l0.reshape(1, conf.targetSize, conf.targetSize)), axis=0)
-    mat = np.concatenate((mat, l1.reshape(1, conf.targetSize, conf.targetSize)), axis=0)
-    mat = np.concatenate((mat, l2.reshape(1, conf.targetSize, conf.targetSize)), axis=0)
-    mat = np.concatenate((mat, l3.reshape(1, conf.targetSize, conf.targetSize)), axis=0)
-    mat = np.concatenate((mat, l4.reshape(1, conf.targetSize, conf.targetSize)), axis=0)
-    mat = np.concatenate((mat, l5.reshape(1, conf.targetSize, conf.targetSize)), axis=0)
-    mat = np.concatenate((mat, l6.reshape(1, conf.targetSize, conf.targetSize)), axis=0)
-    mat = np.concatenate((mat, l7.reshape(1, conf.targetSize, conf.targetSize)), axis=0)
+    mat = np.zeros((1, shape, shape), dtype=np.float32)
+    mat = np.concatenate((mat, l0.reshape(1, shape, shape)), axis=0)
+    mat = np.concatenate((mat, l1.reshape(1, shape, shape)), axis=0)
+    mat = np.concatenate((mat, l2.reshape(1, shape, shape)), axis=0)
+    mat = np.concatenate((mat, l3.reshape(1, shape, shape)), axis=0)
+    mat = np.concatenate((mat, l4.reshape(1, shape, shape)), axis=0)
+    mat = np.concatenate((mat, l5.reshape(1, shape, shape)), axis=0)
+    mat = np.concatenate((mat, l6.reshape(1, shape, shape)), axis=0)
+    mat = np.concatenate((mat, l7.reshape(1, shape, shape)), axis=0)
     
     mat = mat[1:, :, :]
     return mat
 
 
-def getLabels(path, conf):
+def getLabels(path, shape):
     # img: H*W*3 (BGR) numpy
     img = cv2.imread(path)
     # img: H*W*3 (RGB) numpy
@@ -114,7 +114,7 @@ def getLabels(path, conf):
     # img: 3*H*W (RGB) numpy
     img = np.transpose(img, (2, 0, 1))
     # img: 3*256*256 numpy
-    img = zeroPadding(img, conf.targetSize)
+    img = zeroPadding(img, shape)
     # numpy
     return img
 

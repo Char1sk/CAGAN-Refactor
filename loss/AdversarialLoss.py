@@ -15,7 +15,7 @@ class AdversarialLoss(nn.Module):
     
     def forward(self, input, target_is_real):
         target_tensor = self.get_target_tensor(input, target_is_real)
-        target_tensor = target_tensor.cuda()
+        # target_tensor = target_tensor.cuda()
         return self.loss(input, target_tensor)
     
     def get_target_tensor(self, input, target_is_real):

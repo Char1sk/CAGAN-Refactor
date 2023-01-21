@@ -19,6 +19,7 @@ class TrainOptions():
         self.parser.add_argument('--input_nc', type=int, default=1, help='number of input sketch channels')
         self.parser.add_argument('--conpt_nc', type=int, default=8, help='number of input conponents channels')
         self.parser.add_argument('--output_nc', type=int, default=3, help='number of output photo channels')
+        self.parser.add_argument('--output_shape', type=int, default=256, help='shape of output photo')
         
         ## Model Path
         self.parser.add_argument('--vgg_model', default='../Models/vgg.model', help='path of VGG model for Perceptual Loss')
