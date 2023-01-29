@@ -52,23 +52,6 @@ except ImportError:
 # from pytorch_fid.inception import InceptionV3
 from utils.inception import InceptionV3
 
-parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-parser.add_argument('--batch-size', type=int, default=50,
-                    help='Batch size to use')
-parser.add_argument('--num-workers', type=int,
-                    help=('Number of processes to use for data loading. '
-                        'Defaults to `min(8, num_cpus)`'))
-parser.add_argument('--device', type=str, default=None,
-                    help='Device to use. Like cuda, cuda:0 or cpu')
-parser.add_argument('--dims', type=int, default=2048,
-                    choices=list(InceptionV3.BLOCK_INDEX_BY_DIM),
-                    help=('Dimensionality of Inception features to use. '
-                        'By default, uses pool3 features'))
-parser.add_argument('--path', type=str, nargs=2, default=['./Output/0Pure/600/',
-# parser.add_argument('--path', type=str, nargs=2, default=['./Output/701/',
-                    ['../Datasets/CUFS/AR/photos', '../Datasets/CUFS/CUHK/photos', '../Datasets/CUFS/XM2VTS/photos']],
-                    help=('Paths to the generated images or '
-                        'to .npz statistic files'))
 
 IMAGE_EXTENSIONS = {'bmp', 'jpg', 'jpeg', 'pgm', 'png', 'ppm',
                     'tif', 'tiff', 'webp'}
@@ -257,7 +240,7 @@ def compute_statistics_of_path(path, model, batch_size, dims, device,
     return m, s
 
 
-def calculate_fid_given_paths(paths, batch_size, device, dims, num_workers=1):
+def calculate_fid_given_paths(paths, batch_size, device, dims, num_workers=1, path='../Models/pt_inception.pth'):
     """Calculates the FID of two paths"""
     print(paths)
     for p in paths:
@@ -266,7 +249,7 @@ def calculate_fid_given_paths(paths, batch_size, device, dims, num_workers=1):
 
     block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
 
-    model = InceptionV3([block_idx]).to(device)
+    model = InceptionV3([block_idx], path=path).to(device)
 
     m1, s1 = compute_statistics_of_path(paths[0], model, batch_size,
                                         dims, device, num_workers)
@@ -277,27 +260,34 @@ def calculate_fid_given_paths(paths, batch_size, device, dims, num_workers=1):
     return fid_value
 
 
-def get_fid(paths):
-    args = parser.parse_args()
+def get_fid(paths, device=None, num_workers=None, path='../Models/pt_inception.pth'):
+    # args = parser.parse_args()
 
-    if args.device is None:
+    if device is None:
         device = torch.device('cuda' if (torch.cuda.is_available()) else 'cpu')
     else:
-        device = torch.device(args.device)
+        device = torch.device(device)
 
-    if args.num_workers is None:
+    if num_workers is None:
         # num_avail_cpus = len(os.sched_getaffinity(0))
         num_avail_cpus = 8
         num_workers = min(num_avail_cpus, 8)
     else:
-        num_workers = args.num_workers
+        num_workers = num_workers
 
     fid_value = calculate_fid_given_paths(paths,
                                           50,
                                           device,
                                           2048,
-                                          num_workers)
+                                          num_workers,
+                                          path)
     return fid_value
+
+
+def get_paths_from_list(folder, file):
+    with open(os.path.join(folder, file), 'r') as f:
+        l = [os.path.join(folder, p.strip()) for p in f.readlines()]
+    return l
 
 
 def main():
@@ -324,4 +314,21 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--batch-size', type=int, default=50,
+                        help='Batch size to use')
+    parser.add_argument('--num-workers', type=int,
+                        help=('Number of processes to use for data loading. '
+                            'Defaults to `min(8, num_cpus)`'))
+    parser.add_argument('--device', type=str, default=None,
+                        help='Device to use. Like cuda, cuda:0 or cpu')
+    parser.add_argument('--dims', type=int, default=2048,
+                        choices=list(InceptionV3.BLOCK_INDEX_BY_DIM),
+                        help=('Dimensionality of Inception features to use. '
+                            'By default, uses pool3 features'))
+    parser.add_argument('--path', type=str, nargs=2, default=['./Output/0Pure/600/',
+    # parser.add_argument('--path', type=str, nargs=2, default=['./Output/701/',
+                        ['../Datasets/CUFS/AR/photos', '../Datasets/CUFS/CUHK/photos', '../Datasets/CUFS/XM2VTS/photos']],
+                        help=('Paths to the generated images or '
+                            'to .npz statistic files'))
     main()

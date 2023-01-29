@@ -23,6 +23,7 @@ class TrainOptions():
         
         ## Model Path
         self.parser.add_argument('--vgg_model', default='../Models/vgg.model', help='path of VGG model for Perceptual Loss')
+        self.parser.add_argument('--inception_model', default='../Models/pt_inception.pth', help='path of Inception model for FID')
         
         ## Loss Params
         self.parser.add_argument('--alpha', type=float, default=0.7, help='weight of Global L1 Loss in Compositional Loss')

@@ -28,9 +28,9 @@ class MyDataset(data.Dataset):
         conptPath = os.path.join(self.opt.data_folder, names[2])
         labelPath = os.path.join(self.opt.data_folder, names[1])
         
-        inputs = getInputs(inputPath, self.opt.output_size)
-        conpts = getConpts(conptPath, self.opt.output_size)
-        labels = getLabels(labelPath, self.opt.output_size)
+        inputs = getInputs(inputPath, self.opt.output_shape)
+        conpts = getConpts(conptPath, self.opt.output_shape)
+        labels = getLabels(labelPath, self.opt.output_shape)
         
         inputs = torch.from_numpy(inputs)
         conpts = torch.from_numpy(conpts)

@@ -33,7 +33,8 @@ class InceptionV3(nn.Module):
                  resize_input=True,
                  normalize_input=True,
                  requires_grad=False,
-                 use_fid_inception=True):
+                 use_fid_inception=True,
+                 path='../Models/pt_inception.pth'):
         """Build pretrained InceptionV3
 
         Parameters
@@ -77,7 +78,7 @@ class InceptionV3(nn.Module):
         self.blocks = nn.ModuleList()
 
         if use_fid_inception:
-            inception = fid_inception_v3()
+            inception = fid_inception_v3(path)
         else:
             inception = _inception_v3(pretrained=True)
 
@@ -181,7 +182,7 @@ def _inception_v3(*args, **kwargs):
     return torchvision.models.inception_v3(*args, **kwargs)
 
 
-def fid_inception_v3():
+def fid_inception_v3(path):
     """Build pretrained Inception model for FID computation
 
     The Inception model for FID computation uses a different set of weights
@@ -204,7 +205,8 @@ def fid_inception_v3():
     inception.Mixed_7c = FIDInceptionE_2(2048)
 
     # state_dict = load_state_dict_from_url(FID_WEIGHTS_URL, progress=True)
-    state_dict = torch.load('../Models/pt_inception.pth')
+    # state_dict = torch.load('../Models/pt_inception.pth')
+    state_dict = torch.load(path)
     inception.load_state_dict(state_dict)
     return inception
 

@@ -7,7 +7,7 @@ import os
 
 from options.train_options import TrainOptions
 from utils.weight_init import weights_init
-from utils.fid_score import get_fid
+from utils.fid_score import get_fid, get_paths_from_list
 from utils.my_logger import get_logger, log_loss, write_loss
 from data.dataset import MyDataset
 from models.VggEncoder import MyVggEncoder
@@ -68,7 +68,7 @@ def main():
     # Log
     logDir = os.path.join(opt.logs_folder, opt.log_name)
     if not os.path.exists(logDir):
-        os.mkdir(logDir)
+        os.makedirs(logDir)
     writer = SummaryWriter(logDir)
     logger = get_logger(logDir)
     
@@ -135,7 +135,7 @@ def main():
         write_loss(writer, epochRecord, 'train_epoch', (epoch-1))
         
         ### Test and Save Every Epoch Period
-        if epoch >= opt.test_start and epoch % opt.test_period == 0:
+        if epoch >= opt.test_start and (epoch-opt.test_start) % opt.test_period == 0:
             logger.info('=========== Test ===========')
             with torch.no_grad():
                 testRecord = LossRecord()
@@ -143,7 +143,7 @@ def main():
                 if opt.save_image_when_test:
                     saveDir = os.path.join(opt.image_saves_folder, str(epoch))
                     if not os.path.exists(saveDir):
-                        os.mkdir(saveDir)
+                        os.makedirs(saveDir)
                 
                 for (i, data) in enumerate(testLoader, 1):
                     inputs, conpts, labels = [d.to(device) for d in data]
@@ -171,7 +171,7 @@ def main():
                         torchvision.utils.save_image(preds, f'{saveDir}/{i}.jpg', normalize=True, scale_each=True)
                 
                 if opt.save_image_when_test:
-                    fid = get_fid([saveDir, opt.fid_list])
+                    fid = get_fid([saveDir, get_paths_from_list(opt.data_folder, opt.fid_list)], path=opt.inception_model)
                     logger.info(f'Epoch: {epoch:>3d}; FID: {fid:>9.5f};')
                     writer.add_scalar('FID/test', fid, epoch)
                     
