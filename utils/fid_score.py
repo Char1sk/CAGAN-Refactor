@@ -218,6 +218,7 @@ def compute_statistics_of_path(path, model, batch_size, dims, device,
                                num_workers=1):
     print(type(path))
     if isinstance(path, list):
+        # list of folders
         allfiles = []
         for p in path:
             p = pathlib.Path(p)
@@ -225,12 +226,18 @@ def compute_statistics_of_path(path, model, batch_size, dims, device,
                         for file in p.glob('*.{}'.format(ext))])
             allfiles += files
             # print(len(allfiles))
+        m, s = calculate_activation_statistics(allfiles, model, batch_size,
+                                               dims, device, num_workers)
+    elif isinstance(path, tuple):
+        # tuple of filenames
+        files = list(path)
         m, s = calculate_activation_statistics(files, model, batch_size,
                                                dims, device, num_workers)
     elif path.endswith('.npz'):
         with np.load(path) as f:
             m, s = f['mu'][:], f['sigma'][:]
     else:
+        # one folder
         path = pathlib.Path(path)
         files = sorted([file for ext in IMAGE_EXTENSIONS
                        for file in path.glob('*.{}'.format(ext))])
@@ -284,9 +291,15 @@ def get_fid(paths, device=None, num_workers=None, path='../Models/pt_inception.p
     return fid_value
 
 
-def get_paths_from_list(folder, file):
+def get_folders_from_list(folder, file):
     with open(os.path.join(folder, file), 'r') as f:
         l = [os.path.join(folder, p.strip()) for p in f.readlines()]
+    return l
+
+
+def get_paths_from_list(folder, file):
+    with open(os.path.join(folder, file), 'r') as f:
+        l = [os.path.join(folder, line.strip().split('||')[1]) for line in f.readlines()]
     return l
 
 

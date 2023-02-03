@@ -7,7 +7,7 @@ import os
 
 from options.train_options import TrainOptions
 from utils.weight_init import weights_init
-from utils.fid_score import get_fid, get_paths_from_list
+from utils.fid_score import get_fid, get_folders_from_list, get_paths_from_list
 from utils.my_logger import get_logger, log_loss, write_loss
 from data.dataset import MyDataset
 from models.VggEncoder import MyVggEncoder
@@ -33,6 +33,7 @@ def main():
     testSet  = MyDataset(opt, False)
     trainLoader = DataLoader(dataset=trainSet, batch_size=opt.batch_size, shuffle=True)
     testLoader  = DataLoader(dataset=testSet,  batch_size=1, shuffle=False)
+    train_testLoader = DataLoader(dataset=trainSet,  batch_size=1, shuffle=False)
     
     # Models
     VGG = MyVggEncoder(opt.vgg_model)
@@ -77,7 +78,6 @@ def main():
     
     # Train
     logger.info('=========== Training Begin ===========')
-    
     for epoch in range(1, opt.epochs+1):
         logger.info(f'Epoch: {epoch:>3d}')
         epochRecord = LossRecord()
@@ -129,22 +129,45 @@ def main():
             epochRecord.add(lossD.item(), lossG.item(), lossGAdv.item(), lossGCmp.item(), lossGPer.item())
             write_loss(writer, batchRecord, 'train_batch', (epoch-1)*len(trainLoader)+(i-1))
         
-        ### Print Every Epoch
+        ### Every Epoch: Print
         epochRecord.mean()
         log_loss(logger, epochRecord, epoch)
         write_loss(writer, epochRecord, 'train_epoch', (epoch-1))
         
-        ### Test and Save Every Epoch Period
+        ### Every Epoch Period: Train FID, Test Loss/FID, and Sav
         if epoch >= opt.test_start and (epoch-opt.test_start) % opt.test_period == 0:
-            logger.info('=========== Test ===========')
+            
+            ### Train FID/Image
+            logger.info('=========== Train Set ==========')
             with torch.no_grad():
+                
+                saveDir = os.path.join(opt.image_saves_folder, 'Train', str(epoch))
+                if not os.path.exists(saveDir):
+                    os.makedirs(saveDir)
+                
+                for (i, data) in enumerate(train_testLoader, 1):
+                    inputs, conpts, labels = [d.to(device) for d in data]
+                    AppFeatures = GenAppE(inputs)
+                    ComFeatures = GenComE(conpts)
+                    preds = GenD(AppFeatures, ComFeatures)
+                    
+                    if i in opt.train_show_list:
+                        writer.add_image(f'gen_photos_train/{i}', preds, epoch)
+                    torchvision.utils.save_image(preds, f'{saveDir}/{i}.jpg', normalize=True, scale_each=True)
+                
+                fid = get_fid([saveDir, tuple(get_paths_from_list(opt.data_folder, opt.train_list))], path=opt.inception_model)
+                logger.info(f'Epoch: {epoch:>3d}; FID: {fid:>9.5f};')
+                writer.add_scalar('FID/train', fid, epoch)
+            
+            ### Test Loss/FID/Image
+            logger.info('=========== Test Set ===========')
+            with torch.no_grad():
+                
+                saveDir = os.path.join(opt.image_saves_folder, 'Test', str(epoch))
+                if not os.path.exists(saveDir):
+                    os.makedirs(saveDir)
+                
                 testRecord = LossRecord()
-                
-                if opt.save_image_when_test:
-                    saveDir = os.path.join(opt.image_saves_folder, str(epoch))
-                    if not os.path.exists(saveDir):
-                        os.makedirs(saveDir)
-                
                 for (i, data) in enumerate(testLoader, 1):
                     inputs, conpts, labels = [d.to(device) for d in data]
                     AppFeatures = GenAppE(inputs)
@@ -167,29 +190,30 @@ def main():
                     
                     testRecord.add(lossD.item(), lossG.item(), lossGAdv.item(), lossGCmp.item(), lossGPer.item())
                     
-                    if opt.save_image_when_test:
-                        torchvision.utils.save_image(preds, f'{saveDir}/{i}.jpg', normalize=True, scale_each=True)
+                    if i in opt.test_show_list:
+                        writer.add_image(f'gen_photos_test/{i}', preds, epoch)
+                    torchvision.utils.save_image(preds, f'{saveDir}/{i}.jpg', normalize=True, scale_each=True)
                 
-                if opt.save_image_when_test:
-                    fid = get_fid([saveDir, get_paths_from_list(opt.data_folder, opt.fid_list)], path=opt.inception_model)
-                    logger.info(f'Epoch: {epoch:>3d}; FID: {fid:>9.5f};')
-                    writer.add_scalar('FID/test', fid, epoch)
-                    
+                fid = get_fid([saveDir, tuple(get_paths_from_list(opt.data_folder, opt.test_list))], path=opt.inception_model)
+                logger.info(f'Epoch: {epoch:>3d}; FID: {fid:>9.5f};')
+                writer.add_scalar('FID/test', fid, epoch)
+                
                 testRecord.mean()
                 log_loss(logger, testRecord, epoch)
                 write_loss(writer, testRecord, 'test', epoch)
                 
-            ### Save
-            if not os.path.exists(opt.model_saves_folder):
-                os.mkdir(opt.model_saves_folder)
-            Disc_out_path = os.path.join(opt.model_saves_folder, f'Disc_epoch_{epoch}.weight')
-            torch.save(Disc.state_dict(), Disc_out_path)
-            GenD_out_path = os.path.join(opt.model_saves_folder, f'GenD_epoch_{epoch}.weight')
-            torch.save(GenD.state_dict(), GenD_out_path)
-            GenAppE_out_path = os.path.join(opt.model_saves_folder, f'GenAppE_epoch_{epoch}.weight')
-            torch.save(GenAppE.state_dict(), GenAppE_out_path)
-            GenComE_out_path = os.path.join(opt.model_saves_folder, f'GenComE_epoch_{epoch}.weight')
-            torch.save(GenComE.state_dict(), GenComE_out_path)
+            ### Save Models
+            if opt.save_models:
+                if not os.path.exists(opt.model_saves_folder):
+                    os.mkdir(opt.model_saves_folder)
+                Disc_out_path = os.path.join(opt.model_saves_folder, f'Disc_epoch_{epoch}.weight')
+                torch.save(Disc.state_dict(), Disc_out_path)
+                GenD_out_path = os.path.join(opt.model_saves_folder, f'GenD_epoch_{epoch}.weight')
+                torch.save(GenD.state_dict(), GenD_out_path)
+                GenAppE_out_path = os.path.join(opt.model_saves_folder, f'GenAppE_epoch_{epoch}.weight')
+                torch.save(GenAppE.state_dict(), GenAppE_out_path)
+                GenComE_out_path = os.path.join(opt.model_saves_folder, f'GenComE_epoch_{epoch}.weight')
+                torch.save(GenComE.state_dict(), GenComE_out_path)
     
     logger.info('=========== Training  End  ===========')
 

@@ -43,13 +43,16 @@ class TrainOptions():
         ## Test Options
         self.parser.add_argument('--test_start', type=int, default=50, help='which epoch to start test')
         self.parser.add_argument('--test_period', type=int, default=50, help='how many epochs to test once')
-        self.parser.add_argument('--save_image_when_test', action='store_true', help='save test fake images or not')
+        # self.parser.add_argument('--save_image_when_test', action='store_true', help='whether to save gen images after test')
+        self.parser.add_argument('--save_models', action='store_true', help='whether to save models after test')
+        self.parser.add_argument('--train_show_list', type=list, default=[1, 91, 175], help='which train images to show')
+        self.parser.add_argument('--test_show_list', type=list, default=[1, 101, 144], help='which test images to show')
         
         ## Logs and Saves
         self.parser.add_argument('--logs_folder', default='./Logs', help='logs folder for TensorBoard')
         self.parser.add_argument('--log_name', default='exp_debug', help='log name of current run')
-        self.parser.add_argument('--model_saves_folder', default='./Saves', help='saves folder for model')
-        self.parser.add_argument('--image_saves_folder', default='./Saves', help='saves folder for image')
+        self.parser.add_argument('--model_saves_folder', default='./Models', help='saves folder for model')
+        self.parser.add_argument('--image_saves_folder', default='./Images', help='saves folder for image')
         
     
     def parse(self):
