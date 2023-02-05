@@ -28,3 +28,4 @@
 压缩结果文件
 计算展示Train和Test的结果：Train和Test周期性计算FID
 试一下loss比例
+噪点问题和IO取值范围
