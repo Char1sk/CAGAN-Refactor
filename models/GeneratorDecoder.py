@@ -92,6 +92,6 @@ class MyGeneratorDecoder(nn.Module):
         x = self.conv16(x)
         x = self.tanh16(x)
         
-        x = x * 255
+        x = (x+1) / 2 * 255
         
         return x

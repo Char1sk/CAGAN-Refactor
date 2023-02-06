@@ -215,6 +215,7 @@ def main():
                 GenComE_out_path = os.path.join(opt.model_saves_folder, f'GenComE_epoch_{epoch}.weight')
                 torch.save(GenComE.state_dict(), GenComE_out_path)
     
+    writer.close()
     logger.info('=========== Training  End  ===========')
 
 
