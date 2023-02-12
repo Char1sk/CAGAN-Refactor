@@ -111,8 +111,11 @@ def getLabels(path, shape):
     img = cv2.imread(path)
     # img: H*W*3 (RGB) numpy
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    # img: 3*H*W (RGB) numpy
-    img = np.transpose(img, (2, 0, 1))
+    # img: 3*H*W (RGB) numpy [0.0, 1.0]
+    img = transforms.Compose([
+        transforms.ToTensor()
+    ])(img)
+    img = img.numpy()
     # img: 3*256*256 numpy
     img = zeroPadding(img, shape)
     # numpy

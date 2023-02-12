@@ -33,7 +33,7 @@ class TrainOptions():
         self.parser.add_argument('--lr', type=float, default=0.0002, help='learning rate of all optimizers')
         self.parser.add_argument('--beta1', type=float, default=0.5, help='beta1 of all Adam optimizers')
         self.parser.add_argument('--beta2', type=float, default=0.999, help='beta2 of all Adam optimizers')
-        self.parser.add_argument('--lamda', type=float, default=0.01, help='weight of Compositional Loss')
+        self.parser.add_argument('--lamda', type=float, default=2.5, help='weight of Compositional Loss')
         self.parser.add_argument('--gamma', type=float, default=10, help='weight of Perceptual Loss')
         
         ## Train Options

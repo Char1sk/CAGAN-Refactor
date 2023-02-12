@@ -132,7 +132,7 @@ def main():
         ### Every Epoch: Print
         epochRecord.mean()
         log_loss(logger, epochRecord, epoch)
-        write_loss(writer, epochRecord, 'train_epoch', (epoch-1))
+        write_loss(writer, epochRecord, 'train_epoch', epoch)
         
         ### Every Epoch Period: Train FID, Test Loss/FID, and Sav
         if epoch >= opt.test_start and (epoch-opt.test_start) % opt.test_period == 0:
@@ -152,7 +152,7 @@ def main():
                     preds = GenD(AppFeatures, ComFeatures)
                     
                     if i in opt.train_show_list:
-                        writer.add_image(f'gen_photos_train/{i}', preds.squeeze(0)/255, epoch)
+                        writer.add_image(f'gen_photos_train/{i}', preds.squeeze(0), epoch)
                     torchvision.utils.save_image(preds, f'{saveDir}/{i}.jpg', normalize=True, scale_each=True)
                 
                 fid = get_fid([saveDir, tuple(get_paths_from_list(opt.data_folder, opt.train_list))], path=opt.inception_model)
@@ -191,7 +191,7 @@ def main():
                     testRecord.add(lossD.item(), lossG.item(), lossGAdv.item(), lossGCmp.item(), lossGPer.item())
                     
                     if i in opt.test_show_list:
-                        writer.add_image(f'gen_photos_test/{i}', preds.squeeze(0)/255, epoch)
+                        writer.add_image(f'gen_photos_test/{i}', preds.squeeze(0), epoch)
                     torchvision.utils.save_image(preds, f'{saveDir}/{i}.jpg', normalize=True, scale_each=True)
                 
                 fid = get_fid([saveDir, tuple(get_paths_from_list(opt.data_folder, opt.test_list))], path=opt.inception_model)
