@@ -10,7 +10,7 @@ class TrainOptions():
     
     def initialize(self):
         ## Dataset Path
-        self.parser.add_argument('--data_folder', default='../Datasets/CUFS-CAGAN-Change/', help='the dataset folder')
+        self.parser.add_argument('--data_folder', default='../Datasets/CUFS-CAGAN-New/', help='the dataset folder')
         self.parser.add_argument('--train_list', default='files/list_train.txt', help='the list of train samples in dataset')
         self.parser.add_argument('--test_list', default='files/list_test.txt', help='the list of test samples in dataset')
         self.parser.add_argument('--fid_list', default='files/list_fid.txt', help='the list of label folders for FID')
