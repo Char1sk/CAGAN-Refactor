@@ -4,14 +4,16 @@ import torch.nn as nn
 
 class AdversarialLoss(nn.Module):
     
-    def __init__(self, device):
+    def __init__(self, device, useBCE):
         super(AdversarialLoss, self).__init__()
         self.real_label = 1.0
         self.fake_label = 0.0
         self.real_label_var = None
         self.fake_label_var = None
-        # self.loss = nn.BCELoss()
-        self.loss = nn.MSELoss()
+        if useBCE:
+            self.loss = nn.BCELoss()
+        else:
+            self.loss = nn.MSELoss()
         
         self.device = device
     

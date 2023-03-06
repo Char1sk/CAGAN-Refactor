@@ -40,7 +40,7 @@ def main():
     GenAppE = MyGeneratorEncoder(in_channels = opt.input_nc)
     GenComE = MyGeneratorEncoder(in_channels = opt.conpt_nc)
     GenD = MyGeneratorDecoder(out_channels = opt.output_nc)
-    Disc = MyPatchDiscriminator(in_channels = opt.input_nc + opt.conpt_nc + opt.output_nc)
+    Disc = MyPatchDiscriminator(in_channels = opt.input_nc + opt.conpt_nc + opt.output_nc, use_sigmoid=opt.BCE)
     
     # Cuda
     VGG.to(device)
@@ -56,7 +56,7 @@ def main():
     Disc.apply(weights_init)
     
     # Loss
-    criterionAdv = AdversarialLoss(device)
+    criterionAdv = AdversarialLoss(device, opt.BCE)
     criterionCmp = CompositionalLoss(opt.alpha, device)
     criterionPer = PerceptualLoss(VGG, opt.vgg_layers)
     
@@ -103,7 +103,7 @@ def main():
             
             lossDFake = criterionAdv(fakeJudge, False)
             lossDReal = criterionAdv(realJudge, True)
-            lossD = (lossDFake + lossDReal) * 0.5
+            lossD = opt.delta * (lossDFake + lossDReal) * 0.5
             lossD.backward()
             
             optimDisc.step()
@@ -114,7 +114,7 @@ def main():
             optimGenD.zero_grad()
             
             fakeJudge = Disc(fakePair)
-            lossGAdv = criterionAdv(fakeJudge, True)
+            lossGAdv = opt.delta * criterionAdv(fakeJudge, True)
             lossGCmp = opt.lamda * criterionCmp(preds, labels, conpts)
             lossGPer = opt.gamma * criterionPer(preds, labels)
             lossG = lossGAdv + lossGCmp + lossGPer
@@ -181,9 +181,9 @@ def main():
                     
                     lossDFake = criterionAdv(fakeJudge, False)
                     lossDReal = criterionAdv(realJudge, True)
-                    lossD = (lossDFake + lossDReal) * 0.5
+                    lossD = opt.delta * (lossDFake + lossDReal) * 0.5
                     
-                    lossGAdv = criterionAdv(fakeJudge, True)
+                    lossGAdv = opt.delta * criterionAdv(fakeJudge, True)
                     lossGCmp = opt.lamda * criterionCmp(preds, labels, conpts)
                     lossGPer = opt.gamma * criterionPer(preds, labels)
                     lossG = lossGAdv + lossGCmp + lossGPer

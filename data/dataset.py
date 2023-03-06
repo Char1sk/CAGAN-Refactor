@@ -60,7 +60,7 @@ def getInputs(path, shape):
     # img = np.expand_dims(img, axis=2)
     img = transforms.Compose([
         transforms.ToTensor(),
-        # transforms.Normalize(0.5, 0.5)
+        transforms.Normalize(0.6022, 0.4003)
     ])(img)
     img = img.numpy()
     # img: 1*H*W numpy

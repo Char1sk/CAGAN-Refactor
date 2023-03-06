@@ -31,5 +31,7 @@
 噪点问题和IO取值范围：0~1，train吊test捞
 
 Log莫名丢失：--samples_per_plugin scalars=100000000
-输出范围
-数据清理
+输出范围：似乎有效，似乎无效
+数据清理：依然一般，试试origin？真的拉a
+
+BCE完全不行
