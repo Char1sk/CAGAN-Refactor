@@ -55,54 +55,42 @@ def getNames(path):
 
 
 def getInputs(path, shape):
-    # img: H*W*1 numpy
+    # img: H*W numpy
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-    # img = np.expand_dims(img, axis=2)
+    # img: 1*SHAPE*SHAPE tensor [0.0, 1.0]
+    shapes = getPadShape(img.shape, shape)
     img = transforms.Compose([
         transforms.ToTensor(),
+        transforms.Pad(shapes),
         transforms.Normalize(0.6022, 0.4003)
     ])(img)
-    img = img.numpy()
-    # img: 1*H*W numpy
-    # img = np.transpose(img.numpy(), (2, 0, 1))
-    # img: 1*256*256 numpy
-    img = zeroPadding(img, shape)
-    # numpy
+    # tensor
     return img
 
 
 def getConpts(path, shape):
-    # get mat, n*256*256
+    # get mat, 250*200*n
     mats = sio.loadmat(path)['res_label']
-    mats = mats.astype(np.float32)
-    mats = np.transpose(mats, (2, 0, 1))
-    mats = zeroPadding(mats, shape)
+    mats = torch.from_numpy(mats)
+    mats = mats.permute(2, 0, 1)
+    shapes = getPadShape(mats.shape, shape)
+    mats = transforms.Pad(shapes)(mats)
     
     # choose 8 channels
     l0 = mats[0, :, :]
     l1 = mats[1, :, :]
     l2 = mats[7, :, :] + mats[6, :, :]
-    l2 = np.where(l2 > 1, 1, l2)
+    l2 = torch.where(l2 > 1, torch.tensor(1,dtype=torch.float32), l2)
     l3 = mats[5, :, :] + mats[4, :, :]
-    l3 = np.where(l3 > 1, 1, l3)
+    l3 = torch.where(l3 > 1, torch.tensor(1,dtype=torch.float32), l3)
     l4 = mats[2, :, :]
     l5 = mats[11, :, :] + mats[12, :, :]
-    l5 = np.where(l5 > 1, 1, l5)
+    l5 = torch.where(l5 > 1, torch.tensor(1,dtype=torch.float32), l5)
     l6 = mats[10, :, :]
     l7 = mats[13, :, :]
     
     # merge channels
-    mat = np.zeros((1, shape, shape), dtype=np.float32)
-    mat = np.concatenate((mat, l0.reshape(1, shape, shape)), axis=0)
-    mat = np.concatenate((mat, l1.reshape(1, shape, shape)), axis=0)
-    mat = np.concatenate((mat, l2.reshape(1, shape, shape)), axis=0)
-    mat = np.concatenate((mat, l3.reshape(1, shape, shape)), axis=0)
-    mat = np.concatenate((mat, l4.reshape(1, shape, shape)), axis=0)
-    mat = np.concatenate((mat, l5.reshape(1, shape, shape)), axis=0)
-    mat = np.concatenate((mat, l6.reshape(1, shape, shape)), axis=0)
-    mat = np.concatenate((mat, l7.reshape(1, shape, shape)), axis=0)
-    
-    mat = mat[1:, :, :]
+    mat = torch.stack([l0,l1,l2,l3,l4,l5,l6,l7], dim=0)
     return mat
 
 
@@ -111,14 +99,13 @@ def getLabels(path, shape):
     img = cv2.imread(path)
     # img: H*W*3 (RGB) numpy
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    # img: 3*H*W (RGB) numpy [0.0, 1.0]
+    # img: 3*SHAPE*SHAPE (RGB) tensor [0.0, 1.0]
+    shapes = getPadShape(img.shape, shape)
     img = transforms.Compose([
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Pad(shapes)
     ])(img)
-    img = img.numpy()
-    # img: 3*256*256 numpy
-    img = zeroPadding(img, shape)
-    # numpy
+    # tensor
     return img
 
 
@@ -128,3 +115,11 @@ def zeroPadding(img, tsize):
     padL = (tsize - img.shape[2]) // 2
     zeros[:, padT:tsize-padT, padL:tsize-padL] = img
     return zeros
+
+
+def getPadShape(shape, tshape):
+    padHt = (tshape - shape[1]) // 2
+    padHd = tshape - shape[1] - padHt
+    padWl = (tshape - shape[2]) // 2
+    padWr = tshape - shape[2] - padWl
+    return (padWl, padHt, padWr, padHd)
