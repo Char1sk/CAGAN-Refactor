@@ -1,9 +1,8 @@
-# train old in Kaggle, paper param, pad
+# train old in Kaggle, paper param, nopad
 set -ex
 if [ -z "$1" ]; then name="train_param_01"; else name=$1; fi;
 python /kaggle/input/cagan1/CAGAN/train.py                                          \
     --log_name ${name}                                                              \
-    --pad                                                                           \
     --delta 1 --lamda 10 --gamma 5                                                  \
     --epochs 700 --batch_size 16                                                    \
     --test_start 100 --test_period 100                                              \

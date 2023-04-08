@@ -28,13 +28,9 @@ class MyDataset(data.Dataset):
         conptPath = os.path.join(self.opt.data_folder, names[2])
         labelPath = os.path.join(self.opt.data_folder, names[1])
         
-        inputs = getInputs(inputPath, self.opt.output_shape)
-        conpts = getConpts(conptPath, self.opt.output_shape)
-        labels = getLabels(labelPath, self.opt.output_shape)
-        
-        inputs = torch.from_numpy(inputs)
-        conpts = torch.from_numpy(conpts)
-        labels = torch.from_numpy(labels)
+        inputs = getInputs(inputPath, self.opt.output_shape, self.opt.pad)
+        conpts = getConpts(conptPath, self.opt.output_shape, self.opt.pad)
+        labels = getLabels(labelPath, self.opt.output_shape, self.opt.pad)
         
         return inputs, conpts, labels
         
@@ -54,11 +50,11 @@ def getNames(path):
     return ret
 
 
-def getInputs(path, shape):
+def getInputs(path, shape, pad):
     # img: H*W numpy
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
     # img: 1*SHAPE*SHAPE tensor [0.0, 1.0]
-    shapes = getPadShape(img.shape, shape)
+    shapes = getPadShape(img.shape, shape) if pad else 0
     img = transforms.Compose([
         transforms.ToTensor(),
         transforms.Pad(shapes),
@@ -68,12 +64,12 @@ def getInputs(path, shape):
     return img
 
 
-def getConpts(path, shape):
+def getConpts(path, shape, pad):
     # get mat, 250*200*n
     mats = sio.loadmat(path)['res_label']
     mats = torch.from_numpy(mats)
     mats = mats.permute(2, 0, 1)
-    shapes = getPadShape(mats.shape, shape)
+    shapes = getPadShape(mats.shape, shape) if pad else 0
     mats = transforms.Pad(shapes)(mats)
     
     # choose 8 channels
@@ -94,16 +90,16 @@ def getConpts(path, shape):
     return mat
 
 
-def getLabels(path, shape):
+def getLabels(path, shape, pad):
     # img: H*W*3 (BGR) numpy
     img = cv2.imread(path)
     # img: H*W*3 (RGB) numpy
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     # img: 3*SHAPE*SHAPE (RGB) tensor [0.0, 1.0]
-    shapes = getPadShape(img.shape, shape)
+    shapes = getPadShape(img.shape, shape) if pad else 0
     img = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Pad(shapes)
+        transforms.Pad(shapes),
     ])(img)
     # tensor
     return img

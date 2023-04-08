@@ -67,13 +67,14 @@ class MyGeneratorEncoder(nn.Module):
         x = self.norm6(x)
         temp6 = x
         
-        x = self.relu7(x)
-        x = self.conv7(x)
-        x = self.norm7(x)
-        temp7 = x
+        # x = self.relu7(x)
+        # x = self.conv7(x)
+        # x = self.norm7(x)
+        # temp7 = x
         
         x = self.relu8(x)
         x = self.conv8(x)
         temp8 = x
         
-        return [temp1,temp2,temp3,temp4,temp5,temp6,temp7,temp8]
+        # return [temp1,temp2,temp3,temp4,temp5,temp6,temp7,temp8]
+        return [temp1,temp2,temp3,temp4,temp5,temp6,temp8]

@@ -19,6 +19,7 @@ class TrainOptions():
         self.parser.add_argument('--input_nc', type=int, default=1, help='number of input sketch channels')
         self.parser.add_argument('--conpt_nc', type=int, default=8, help='number of input conponents channels')
         self.parser.add_argument('--output_nc', type=int, default=3, help='number of output photo channels')
+        self.parser.add_argument('--pad', action='store_true', help='whether to pad the input imgs')
         self.parser.add_argument('--output_shape', type=int, default=256, help='shape of output photo')
         
         ## Model Path
@@ -53,7 +54,7 @@ class TrainOptions():
         ## Logs and Saves
         self.parser.add_argument('--logs_folder', default='./Logs', help='logs folder for TensorBoard')
         self.parser.add_argument('--log_name', default='exp_debug', help='log name of current run')
-        self.parser.add_argument('--model_saves_folder', default='./Models', help='saves folder for model')
+        self.parser.add_argument('--model_saves_folder', default='./Checkpoints', help='saves folder for model')
         self.parser.add_argument('--image_saves_folder', default='./Images', help='saves folder for image')
         
     

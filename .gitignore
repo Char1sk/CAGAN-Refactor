@@ -3,5 +3,6 @@ Logs
 Saves
 Images
 Models
+Checkpoints
 *.ipynb
 temp
