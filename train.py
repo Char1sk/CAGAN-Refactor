@@ -8,6 +8,7 @@ import os
 from options.train_options import TrainOptions
 from utils.weight_init import weights_init
 from utils.fid_score import get_fid, get_folders_from_list, get_paths_from_list
+from utils.fsim_score import cal_fsim_with_tensors
 from utils.my_logger import get_logger, log_loss, write_loss
 from data.dataset import MyDataset
 from models.VggEncoder import MyVggEncoder
@@ -145,19 +146,23 @@ def main():
                 if not os.path.exists(saveDir):
                     os.makedirs(saveDir)
                 
+                fsim = 0.0
                 for (i, data) in enumerate(train_testLoader, 1):
                     inputs, conpts, labels = [d.to(device) for d in data]
                     AppFeatures = GenAppE(inputs)
                     ComFeatures = GenComE(conpts)
                     preds = GenD(AppFeatures, ComFeatures)
                     
+                    fsim += cal_fsim_with_tensors(labels, preds)
                     if i in opt.train_show_list:
                         writer.add_image(f'gen_photos_train/{i}', preds.squeeze(0), epoch)
                     torchvision.utils.save_image(preds, f'{saveDir}/{i}.jpg', normalize=True, scale_each=True)
                 
+                fsim /= len(train_testLoader)
                 fid = get_fid([saveDir, tuple(get_paths_from_list(opt.data_folder, opt.train_list))], path=opt.inception_model)
-                logger.info(f'Epoch: {epoch:>3d}; FID: {fid:>9.5f};')
+                logger.info(f'Epoch: {epoch:>3d}; FID: {fid:>9.5f}; FSIM: {fsim:>9.5f};')
                 writer.add_scalar('FID/train', fid, epoch)
+                writer.add_scalar('FSIM/train', fsim, epoch)
             
             ### Test Loss/FID/Image
             logger.info('=========== Test Set ===========')
@@ -168,6 +173,7 @@ def main():
                     os.makedirs(saveDir)
                 
                 testRecord = LossRecord()
+                fsim = 0.0
                 for (i, data) in enumerate(testLoader, 1):
                     inputs, conpts, labels = [d.to(device) for d in data]
                     AppFeatures = GenAppE(inputs)
@@ -190,13 +196,16 @@ def main():
                     
                     testRecord.add(lossD.item(), lossG.item(), lossGAdv.item(), lossGCmp.item(), lossGPer.item())
                     
+                    fsim += cal_fsim_with_tensors(labels, preds)
                     if i in opt.test_show_list:
                         writer.add_image(f'gen_photos_test/{i}', preds.squeeze(0), epoch)
                     torchvision.utils.save_image(preds, f'{saveDir}/{i}.jpg', normalize=True, scale_each=True)
                 
+                fsim /= len(testLoader)
                 fid = get_fid([saveDir, tuple(get_paths_from_list(opt.data_folder, opt.test_list))], path=opt.inception_model)
-                logger.info(f'Epoch: {epoch:>3d}; FID: {fid:>9.5f};')
+                logger.info(f'Epoch: {epoch:>3d}; FID: {fid:>9.5f}; FSIM: {fsim:>9.5f};')
                 writer.add_scalar('FID/test', fid, epoch)
+                writer.add_scalar('FSIM/test', fsim, epoch)
                 
                 testRecord.mean()
                 log_loss(logger, testRecord, epoch)
